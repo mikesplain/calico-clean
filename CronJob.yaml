@@ -1,0 +1,36 @@
+apiVersion: batch/v2alpha1
+kind: CronJob
+metadata:
+  name: calico-clean
+  namespace: kube-system
+  labels:
+    role.kubernetes.io/networking: "1"
+spec:
+  schedule: */5 * * * *
+  concurrencyPolicy: Replace
+  successfulJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            role.kubernetes.io/networking: "1"
+          annotations:
+            scheduler.alpha.kubernetes.io/critical-pod: ''
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            kubernetes.io/role: master
+          tolerations:
+          - effect: NoSchedule
+            key: node-role.kubernetes.io/master
+          containers:
+          - name: calico-clean
+            image: mikesplain/calico-clean:latest
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                    name: calico-config
+                    key: etcd_endpoints
